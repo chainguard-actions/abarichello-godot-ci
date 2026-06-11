@@ -1,0 +1,9 @@
+name: godot-ci
+description: Docker image to export Godot Engine games. Templates for Gitlab CI/GitHub Actions deploy to GitLab/GitHub Pages or Itch.io
+author: aBarichello
+branding:
+  color: gray-dark
+  icon: git-merge
+runs: 
+  using: 'docker'
+  image: 'docker://barichello/godot-ci@sha256:d5af2e2b6e0c1e3c4232103578be316856e2215e4273cc17cebb72822eefa29b' # latest
