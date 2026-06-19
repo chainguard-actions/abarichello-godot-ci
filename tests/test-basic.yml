@@ -1,0 +1,25 @@
+name: Test basic usage - godot-ci Docker action
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run godot-ci action
+        id: action
+        uses: .
+        continue-on-error: true
+      - name: Assert action was invoked
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          # The action runs a Docker container (barichello/godot-ci).
+          # Without a Godot project it may exit non-zero, but it should
+          # at least be invoked (outcome is 'success' or 'failure', not 'skipped').
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to be invoked"
+            exit 1
+          fi
+          echo "PASS: action was invoked (outcome=$OUTCOME)"

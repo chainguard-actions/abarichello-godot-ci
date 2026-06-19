@@ -1,6 +1,11 @@
 {
   "owner": "abarichello",
   "repo": "godot-ci",
-  "version": "",
-  "url": "https://github.com/abarichello/godot-ci"
+  "version": "4.7-stable",
+  "commit_sha": "e6d400e62c1e986900be41bffca69c0bfffcb7cc",
+  "url": "https://github.com/abarichello/godot-ci",
+  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
+  "test_agent_version": "1",
+  "harden_agent_version": "1"
 }
