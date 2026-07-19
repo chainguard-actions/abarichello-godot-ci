@@ -1,0 +1,67 @@
+name: "Check Releases"
+on:
+  schedule:
+    - cron: '27 23 * * *'
+  push:
+    branches:
+      - master
+
+permissions: {}
+
+jobs:
+  fetch:
+    name: Fetch Latest Godot Engine Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      release_tag: ${{ steps.parse.outputs.tag }}
+    steps:    
+      - id: parse
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release view --repo godotengine/godot --json tagName --jq .tagName)
+          safe_tag=$(printf '%s' "$TAG" | tr -d '\n\r')
+          echo "tag=$safe_tag" >> $GITHUB_OUTPUT
+  current:
+    name: Fetch Current Godot CI release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      release_tag: ${{ steps.parse.outputs.tag }}
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        with:
+          fetch-depth: 0
+      - id: parse 
+        run: |
+          TAG=$(git tag --list --sort=-creatordate | head --lines 1)
+          safe_tag=$(printf '%s' "$TAG" | tr -d '\n\r')
+          echo "tag=$safe_tag" >> $GITHUB_OUTPUT
+  create:
+    needs: [fetch, current]
+    name: Create New Godot CI Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    if: needs.fetch.outputs.release_tag != needs.current.outputs.release_tag 
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      - run: gh release view --repo godotengine/godot --json body --jq .body | sed 's/\\r\\n/\n/g' > body.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - env:
+          RELEASE_TAG: ${{ needs.fetch.outputs.release_tag }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          safe_tag=$(printf '%s' "$RELEASE_TAG" | tr -d '\n\r')
+          git tag "$safe_tag"
+          git push
+      - uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5 # v0.1.14
+        with:
+          body_path: body.txt
+          tag_name: ${{ needs.fetch.outputs.release_tag }}
+          token: ${{ secrets.PAT }}

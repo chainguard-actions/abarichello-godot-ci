@@ -1,0 +1,177 @@
+name: Manual Build
+on:
+ workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version of engine to build e.g. "3.4.4", "3.5"'
+        required: true
+        type: string
+      release_name:
+        description: 'Release name, usually "stable", but can also be something like "rc3", "beta1"'
+        type: string
+        default: "stable"
+        required: true
+      set_latest:
+        description: 'Tag as latest'
+        type: boolean
+        default: false
+
+permissions: {}
+
+env:
+  IMAGE_NAME: godot-ci
+jobs:
+  version:
+    name: Get Version
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      dotnet_version: ${{ steps.calculate.outputs.dotnet_version }}
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      - id: calculate
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          DOTNET_VERSION=$(./get_dotnet_version.sh ${INPUT_VERSION:+"$INPUT_VERSION"})
+          safe_dotnet=$(printf '%s' "$DOTNET_VERSION" | tr -d '\n\r')
+          echo "dotnet_version=$safe_dotnet" >> $GITHUB_OUTPUT
+          echo "$DOTNET_VERSION"
+  get_tags:
+    name: Get Tags
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      tags: ${{steps.write_tags.outputs.tags}}
+      tags_mono: ${{steps.write_tags_mono.outputs.tags}}
+    steps:
+      - env:
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          safe_owner=$(printf '%s' "$REPO_OWNER" | tr -d '\n\r' | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_OWNER=$safe_owner" >> $GITHUB_ENV
+      - env:
+          INPUT_RELEASE_NAME: ${{ github.event.inputs.release_name }}
+        run: |
+          if [ "$INPUT_RELEASE_NAME" != "stable" ]; then
+            safe_release=$(printf '%s' "$INPUT_RELEASE_NAME" | tr -d '\n\r')
+            IMAGE_TAG=".$safe_release"
+          else
+            IMAGE_TAG=""
+          fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+      - name: Set tags
+        run: |
+          echo "ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}${{ env.IMAGE_TAG }}" >> tags.txt
+          echo "${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}${{ env.IMAGE_TAG }}" >> tags.txt
+      - name: Set latest tags
+        if: ${{inputs.set_latest}}
+        run: |
+              echo "ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:latest" >> tags.txt
+              echo "${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest" >> tags.txt
+      - name: Set Mono tags
+        run: |
+          echo "ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:mono-${{ github.event.inputs.version }}${{ env.IMAGE_TAG }}" >> tags_mono.txt
+          echo "${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:mono-${{ github.event.inputs.version }}${{ env.IMAGE_TAG }}" >> tags_mono.txt
+      - name: Set Mono latest tags
+        if: ${{inputs.set_latest}}
+        run: |
+         echo "ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:mono-latest" >> tags_mono.txt
+         echo "${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:mono-latest" >> tags_mono.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+           name: image_tags
+           path: tags.txt
+           retention-days: 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+            name: image_tags_mono
+            path: tags_mono.txt
+            retention-days: 1
+  build:
+    name: Build Image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    needs: get_tags
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: image_tags
+      - run: |
+          {
+            echo 'TAGS<<EOF'
+            cat tags.txt
+            echo EOF
+          } >> "$GITHUB_ENV"
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1.14.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push Docker images
+        uses: docker/build-push-action@7f9d37fa544684fb73bfe4835ed7214c255ce02b # v2.9.0
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ env.TAGS }}
+          build-args: |
+            GODOT_VERSION=${{ github.event.inputs.version }}
+            RELEASE_NAME=${{ github.event.inputs.release_name }}
+            SUBDIR=${{  github.event.inputs.release_name != 'stable' && format('/{0}', github.event.inputs.release_name) || '' }}
+            GODOT_TEST_ARGS=${{ startsWith( github.event.inputs.version, '3.' ) && '' || '--headless --quit' }}
+            GODOT_PLATFORM=${{ startsWith( github.event.inputs.version, '3.' ) && 'linux_headless.64' || 'linux.x86_64' }}
+  build-mono:
+    name: Build Mono Image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    needs: [version, get_tags]
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: image_tags_mono
+      - run: |
+          {
+            echo 'TAGS<<EOF'
+            cat tags_mono.txt
+            echo EOF
+          } >> "$GITHUB_ENV"
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1.14.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push Docker images
+        uses: docker/build-push-action@7f9d37fa544684fb73bfe4835ed7214c255ce02b # v2.9.0
+        with:
+          context: .
+          file: mono.Dockerfile
+          push: true
+          tags: ${{ env.TAGS }}
+          build-args: |
+            IMAGE=${{ needs.version.outputs.dotnet_version }}
+            GODOT_VERSION=${{ github.event.inputs.version }}
+            RELEASE_NAME=${{ github.event.inputs.release_name }}
+            SUBDIR=${{  github.event.inputs.release_name != 'stable' && format('/{0}', github.event.inputs.release_name) || '' }}
+            ZIP_GODOT_PLATFORM=${{ startsWith( github.event.inputs.version, '3.' ) && 'linux_headless_64' || 'linux_x86_64' }}
+            FILENAME_GODOT_PLATFORM=${{ startsWith( github.event.inputs.version, '3.' ) && 'linux_headless.64' || 'linux.x86_64' }}
