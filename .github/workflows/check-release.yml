@@ -1,0 +1,66 @@
+name: "Check Releases"
+on:
+  schedule:
+    - cron: '27 23 * * *'
+  push:
+    branches:
+      - master
+
+permissions: {}
+
+jobs:
+  fetch:
+    name: Fetch Latest Godot Engine Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      release_tag: ${{ steps.parse.outputs.tag }}
+    steps:    
+      - id: parse
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release view --repo godotengine/godot --json tagName --jq .tagName)
+          safe=$(printf '%s' "$TAG" | tr -d '\n\r')
+          echo "tag=$safe" >> $GITHUB_OUTPUT
+  current:
+    name: Fetch Current Godot CI release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      release_tag: ${{ steps.parse.outputs.tag }}
+    steps:
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+        with:
+          fetch-depth: 0
+      - id: parse 
+        run: |
+          TAG=$(git tag --list --sort=-creatordate | head --lines 1)
+          safe=$(printf '%s' "$TAG" | tr -d '\n\r')
+          echo "tag=$safe" >> $GITHUB_OUTPUT
+  create:
+    needs: [fetch, current]
+    name: Create New Godot CI Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    if: needs.fetch.outputs.release_tag != needs.current.outputs.release_tag 
+    steps:
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+      - run: gh release view --repo godotengine/godot --json body --jq .body | sed 's/\\r\\n/\n/g' > body.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - env:
+          RELEASE_TAG: ${{ needs.fetch.outputs.release_tag }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag "$RELEASE_TAG"
+          git push
+      - uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5 # v0.1.14
+        with:
+          body_path: body.txt
+          tag_name: ${{ needs.fetch.outputs.release_tag }}
+          token: ${{ secrets.PAT }}

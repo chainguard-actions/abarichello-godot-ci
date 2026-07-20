@@ -1,0 +1,119 @@
+name: Release
+on:
+  release:
+    types: [released]
+
+permissions: {}
+
+env:
+  IMAGE_NAME: godot-ci
+jobs:
+  version:
+    name: Get Version
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.calculate.outputs.version }}
+      release_name: ${{ steps.calculate.outputs.release_name }}
+      dotnet_version: ${{ steps.calculate.outputs.dotnet_version }}
+    steps:
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+      - id: calculate
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          safe_ref=$(printf '%s' "$REF_NAME" | tr -d '\n\r')
+          VERSION=${safe_ref%-*}
+          safe_version=$(printf '%s' "$VERSION" | tr -d '\n\r')
+          safe_release_name=$(printf '%s' "${safe_ref#*-}" | tr -d '\n\r')
+          echo "version=$safe_version" >> $GITHUB_OUTPUT
+          echo "release_name=$safe_release_name" >> $GITHUB_OUTPUT
+          DOTNET_VERSION=$(./get_dotnet_version.sh "$VERSION")
+          safe_dotnet=$(printf '%s' "$DOTNET_VERSION" | tr -d '\n\r')
+          echo "dotnet_version=$safe_dotnet" >> $GITHUB_OUTPUT
+          echo "$DOTNET_VERSION"
+          
+  build:
+    name: Build Image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    needs: [version]
+    steps:
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+      - env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          safe=$(printf '%s' "$REPOSITORY_OWNER" | tr -d '\n\r' | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_OWNER=$safe" >> $GITHUB_ENV
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1.14.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push Docker images
+        uses: docker/build-push-action@7f9d37fa544684fb73bfe4835ed7214c255ce02b # v2.9.0
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:${{ needs.version.outputs.version }}
+            ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ needs.version.outputs.version }}
+          build-args: |
+            GODOT_VERSION=${{ needs.version.outputs.version }}
+            RELEASE_NAME=${{ needs.version.outputs.release_name }}
+            GODOT_TEST_ARGS=${{ startsWith( needs.version.outputs.version, '3.' ) && '' || '--headless --quit' }}
+            GODOT_PLATFORM=${{ startsWith( needs.version.outputs.version, '3.' ) && 'linux_headless.64' || 'linux.x86_64' }}
+  build-mono:
+    name: Build Mono Image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    needs: [version]
+    steps:
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+      - env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          safe=$(printf '%s' "$REPOSITORY_OWNER" | tr -d '\n\r' | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_OWNER=$safe" >> $GITHUB_ENV
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1.14.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7 # v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push Docker images
+        uses: docker/build-push-action@7f9d37fa544684fb73bfe4835ed7214c255ce02b # v2.9.0
+        with:
+          context: .
+          file: mono.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:mono-${{ needs.version.outputs.version }}
+            ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:mono-latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:mono-latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:mono-${{ needs.version.outputs.version }}
+          build-args: |
+            IMAGE=${{ needs.version.outputs.dotnet_version }}
+            GODOT_VERSION=${{ needs.version.outputs.version }}
+            RELEASE_NAME=${{ needs.version.outputs.release_name }}
+            ZIP_GODOT_PLATFORM=${{ startsWith( needs.version.outputs.version, '3.' ) && 'linux_headless_64' || 'linux_x86_64' }}
+            FILENAME_GODOT_PLATFORM=${{ startsWith( needs.version.outputs.version, '3.' ) && 'linux_headless.64' || 'linux.x86_64' }}

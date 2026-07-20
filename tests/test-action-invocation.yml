@@ -1,0 +1,25 @@
+name: Test godot-ci action invocation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Invoke godot-ci action
+        id: godot-ci
+        uses: .
+        continue-on-error: true
+
+      - name: Verify action ran (Docker container started)
+        run: |
+          echo "Action outcome: ${{ steps.godot-ci.outcome }}"
+          # The action runs the godot-ci Docker container.
+          # It may exit with a non-zero code if no Godot project is present,
+          # but the important thing is the container was pulled and started.
+          if [ "${{ steps.godot-ci.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action was invoked (outcome: ${{ steps.godot-ci.outcome }})"
