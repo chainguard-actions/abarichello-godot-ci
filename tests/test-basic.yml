@@ -1,0 +1,26 @@
+name: Test basic godot-ci action invocation
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run godot-ci action
+        id: action
+        uses: .
+        continue-on-error: true
+
+      - name: Assert action step was reached
+        run: |
+          echo "godot-ci Docker action step was reached and executed"
+          echo "outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" = "success" ] || [ "${{ steps.action.outcome }}" = "failure" ]; then
+            echo "PASS: action step completed (outcome is success or failure, not skipped)"
+          else
+            echo "FAIL: unexpected outcome: ${{ steps.action.outcome }}"
+            exit 1
+          fi

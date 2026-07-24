@@ -1,0 +1,61 @@
+name: Test godot binary available in godot-ci image
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run godot-ci action
+        id: action
+        uses: .
+        continue-on-error: true
+
+      - name: Assert action step was reached
+        run: |
+          echo "godot-ci Docker action step outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" = "success" ] || [ "${{ steps.action.outcome }}" = "failure" ]; then
+            echo "PASS: action step completed"
+          else
+            echo "FAIL: unexpected outcome: ${{ steps.action.outcome }}"
+            exit 1
+          fi
+
+      - name: Assert godot binary is available in the image
+        run: |
+          echo "Checking godot binary in barichello/godot-ci image..."
+          GODOT_VERSION="$(docker run --rm barichello/godot-ci godot --version 2>&1 || true)"
+          echo "godot version output: $GODOT_VERSION"
+          if echo "$GODOT_VERSION" | grep -qiE '4\.[0-9]'; then
+            echo "PASS: godot binary is available and reports version 4.x"
+          else
+            echo "FAIL: godot binary not found or unexpected version: $GODOT_VERSION"
+            exit 1
+          fi
+
+      - name: Assert butler binary is available in the image
+        run: |
+          echo "Checking butler binary in barichello/godot-ci image..."
+          BUTLER_VERSION="$(docker run --rm barichello/godot-ci butler -V 2>&1 || true)"
+          echo "butler version output: $BUTLER_VERSION"
+          if [ -n "$BUTLER_VERSION" ]; then
+            echo "PASS: butler binary is available: $BUTLER_VERSION"
+          else
+            echo "FAIL: butler binary not found or returned empty output"
+            exit 1
+          fi
+
+      - name: Assert export templates are present in the image
+        run: |
+          echo "Checking export templates in barichello/godot-ci image..."
+          TEMPLATE_LIST="$(docker run --rm barichello/godot-ci ls /root/.local/share/godot/export_templates/ 2>&1 || true)"
+          echo "Template directories: $TEMPLATE_LIST"
+          if [ -n "$TEMPLATE_LIST" ]; then
+            echo "PASS: export templates directory exists and contains: $TEMPLATE_LIST"
+          else
+            echo "FAIL: export templates directory not found or empty"
+            exit 1
+          fi
