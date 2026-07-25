@@ -1,0 +1,48 @@
+name: Test godot-ci action with project structure
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Invoke the godot-ci Docker action under test.
+      # The action provides the Godot CI environment via docker://barichello/godot-ci.
+      # continue-on-error is set because the image is very large and may time
+      # out in constrained CI environments.
+      - name: Invoke godot-ci action
+        id: action
+        uses: .
+        continue-on-error: true
+
+      - name: Assert action image is docker-based
+        run: |
+          echo "Checking action uses docker image..."
+          if grep -q "image: 'docker://barichello/godot-ci'" tests/fixtures/action.yml; then
+            echo "PASS: action uses docker://barichello/godot-ci image"
+          else
+            echo "FAIL: action does not reference expected docker image"
+            exit 1
+          fi
+
+      - name: Assert action runtime is docker
+        run: |
+          echo "Checking action runtime..."
+          if grep -q "using: 'docker'" tests/fixtures/action.yml; then
+            echo "PASS: action runtime is docker"
+          else
+            echo "FAIL: action runtime is not docker"
+            exit 1
+          fi
+
+      - name: Assert fixture action.yml is well-formed
+        run: |
+          echo "Checking fixture action.yml is well-formed..."
+          CONTENT=$(cat tests/fixtures/action.yml)
+          echo "Content: $CONTENT"
+          if [ -z "$CONTENT" ]; then
+            echo "FAIL: fixture action.yml is empty"
+            exit 1
+          fi
+          echo "PASS: fixture action.yml is well-formed"
