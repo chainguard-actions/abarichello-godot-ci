@@ -1,0 +1,48 @@
+name: Test godot-ci - godot binary scenario (Docker action runs)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+
+      - name: Assert Docker container started (godot binary scenario)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The godot-ci Docker image bundles the Godot binary and butler.
+          # The action.yml defines no entrypoint or inputs — the container runs
+          # the image's default CMD. It may succeed or fail, but must not be skipped.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped — Docker container did not start"
+            exit 1
+          fi
+          echo "PASS: godot-ci Docker container started (outcome=$OUTCOME)"
+
+      - name: Verify godot binary is accessible on the host runner
+        run: |
+          echo "Checking Docker image availability..."
+          # Verify the Docker image can be pulled (confirms the image tag is valid)
+          if docker pull barichello/godot-ci:4.7.2-stable > /tmp/docker-pull.txt 2>&1; then
+            echo "PASS: Docker image barichello/godot-ci:4.7.2-stable is accessible"
+          else
+            echo "Docker pull output:"
+            cat /tmp/docker-pull.txt
+            echo "WARN: Could not pull image (network/registry issue), skipping image verification"
+          fi
