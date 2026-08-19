@@ -13,6 +13,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | 4.6.3-stable | [`4.6.3-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.6.3-stable) | [`e6d400e`](https://github.com/abarichello/godot-ci/commit/e6d400e62c1e986900be41bffca69c0bfffcb7cc) |
 | 4.7-stable | [`4.7-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7-stable) | [`e6d400e`](https://github.com/abarichello/godot-ci/commit/e6d400e62c1e986900be41bffca69c0bfffcb7cc) |
 | 4.7.1-stable | [`4.7.1-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7.1-stable) | [`6b5c4c4`](https://github.com/abarichello/godot-ci/commit/6b5c4c434403fdbc695c6268713146be147d4b03) |
+| 4.7.2-stable | [`4.7.2-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7.2-stable) | [`6b5c4c4`](https://github.com/abarichello/godot-ci/commit/6b5c4c434403fdbc695c6268713146be147d4b03) |
 | gh-pages | [`gh-pages`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/gh-pages) | — |
 
 ## Privacy
