@@ -6,15 +6,15 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 ## Versions
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| 4.6-stable | [`4.6-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.6-stable) | [`b1b4afb`](https://github.com/abarichello/godot-ci/commit/b1b4afb74c4799f91452c10bfcab4e7b0b85a520) |
-| 4.6.1-stable | [`4.6.1-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.6.1-stable) | [`4245b74`](https://github.com/abarichello/godot-ci/commit/4245b74ad455bd7735d94ccf5ffc86145396fc21) |
-| 4.6.3-stable | [`4.6.3-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.6.3-stable) | [`e6d400e`](https://github.com/abarichello/godot-ci/commit/e6d400e62c1e986900be41bffca69c0bfffcb7cc) |
-| 4.7-stable | [`4.7-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7-stable) | [`e6d400e`](https://github.com/abarichello/godot-ci/commit/e6d400e62c1e986900be41bffca69c0bfffcb7cc) |
-| 4.7.1-stable | [`4.7.1-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7.1-stable) | [`6b5c4c4`](https://github.com/abarichello/godot-ci/commit/6b5c4c434403fdbc695c6268713146be147d4b03) |
-| 4.7.2-stable | [`4.7.2-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7.2-stable) | [`6b5c4c4`](https://github.com/abarichello/godot-ci/commit/6b5c4c434403fdbc695c6268713146be147d4b03) |
-| gh-pages | [`gh-pages`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/gh-pages) | — |
+| Version | Tag | Upstream commit | Hardening report |
+|---------|-----|-----------------|------------------|
+| 4.6-stable | [`4.6-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.6-stable) | [`b1b4afb`](https://github.com/abarichello/godot-ci/commit/b1b4afb74c4799f91452c10bfcab4e7b0b85a520) | [`HARDENING.md`](https://github.com/chainguard-actions/abarichello-godot-ci/blob/4.6-stable/HARDENING.md) |
+| 4.6.1-stable | [`4.6.1-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.6.1-stable) | [`4245b74`](https://github.com/abarichello/godot-ci/commit/4245b74ad455bd7735d94ccf5ffc86145396fc21) | [`HARDENING.md`](https://github.com/chainguard-actions/abarichello-godot-ci/blob/4.6.1-stable/HARDENING.md) |
+| 4.6.3-stable | [`4.6.3-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.6.3-stable) | [`e6d400e`](https://github.com/abarichello/godot-ci/commit/e6d400e62c1e986900be41bffca69c0bfffcb7cc) | [`HARDENING.md`](https://github.com/chainguard-actions/abarichello-godot-ci/blob/4.6.3-stable/HARDENING.md) |
+| 4.7-stable | [`4.7-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7-stable) | [`e6d400e`](https://github.com/abarichello/godot-ci/commit/e6d400e62c1e986900be41bffca69c0bfffcb7cc) | [`HARDENING.md`](https://github.com/chainguard-actions/abarichello-godot-ci/blob/4.7-stable/HARDENING.md) |
+| 4.7.1-stable | [`4.7.1-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7.1-stable) | [`6b5c4c4`](https://github.com/abarichello/godot-ci/commit/6b5c4c434403fdbc695c6268713146be147d4b03) | [`HARDENING.md`](https://github.com/chainguard-actions/abarichello-godot-ci/blob/4.7.1-stable/HARDENING.md) |
+| 4.7.2-stable | [`4.7.2-stable`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/4.7.2-stable) | [`6b5c4c4`](https://github.com/abarichello/godot-ci/commit/6b5c4c434403fdbc695c6268713146be147d4b03) | [`HARDENING.md`](https://github.com/chainguard-actions/abarichello-godot-ci/blob/4.7.2-stable/HARDENING.md) |
+| gh-pages | [`gh-pages`](https://github.com/chainguard-actions/abarichello-godot-ci/tree/gh-pages) | — | — |
 
 ## Privacy
 
